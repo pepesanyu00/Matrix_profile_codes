@@ -1,0 +1,131 @@
+scamp_init_covariance_scalar:
+        mov     r8, rdx
+        movsd   xmm4, QWORD PTR [rsi]
+        lea     rdx, [0+rdx*8]
+        movsd   xmm3, QWORD PTR [rsi+r8*8]
+        test    rcx, rcx
+        jle     .L4
+        add     rcx, r8
+        lea     rax, [rdi+rdx]
+        pxor    xmm2, xmm2
+        neg     rdx
+        lea     rcx, [rdi+rcx*8]
+.L3:
+        movsd   xmm0, QWORD PTR [rax]
+        movsd   xmm1, QWORD PTR [rax+rdx]
+        add     rax, 8
+        subsd   xmm0, xmm3
+        subsd   xmm1, xmm4
+        mulsd   xmm0, xmm1
+        addsd   xmm2, xmm0
+        cmp     rcx, rax
+        jne     .L3
+        movapd  xmm0, xmm2
+        ret
+.L4:
+        pxor    xmm2, xmm2
+        movapd  xmm0, xmm2
+        ret
+scamp_diag_step_scalar:
+        push    rbx
+        mov     r10, rsi
+        mov     rbx, rcx
+        mov     rsi, rdx
+        mov     rcx, QWORD PTR [rsp+16]
+        mov     rdx, QWORD PTR [rsp+24]
+        lea     rax, [0+rcx*8]
+        lea     r11, [0+rdx*8]
+        movsd   xmm0, QWORD PTR [r10-8+rax]
+        movsd   xmm1, QWORD PTR [r10-8+r11]
+        mulsd   xmm0, QWORD PTR [rsi-8+rdx*8]
+        mulsd   xmm1, QWORD PTR [rsi-8+rax]
+        add     rax, r8
+        addsd   xmm0, xmm1
+        addsd   xmm0, QWORD PTR [rdi]
+        movsd   QWORD PTR [rdi], xmm0
+        mulsd   xmm0, QWORD PTR [rbx+rcx*8]
+        mulsd   xmm0, QWORD PTR [rbx+rdx*8]
+        comisd  xmm0, QWORD PTR [rax]
+        jbe     .L8
+        mov     QWORD PTR [r9+rcx*8], rdx
+        movsd   QWORD PTR [rax], xmm0
+.L8:
+        add     r8, r11
+        comisd  xmm0, QWORD PTR [r8]
+        jbe     .L7
+        mov     QWORD PTR [r9+rdx*8], rcx
+        movsd   QWORD PTR [r8], xmm0
+.L7:
+        pop     rbx
+        ret
+scamp_diag_loop_scalar:
+        mov     r11, QWORD PTR [rsp+8]
+        mov     r10, rdx
+        lea     rdx, [r9+1]
+        cmp     rdx, r11
+        jge     .L15
+        sub     r11, r9
+        mov     eax, 1
+.L21:
+        movsd   xmm1, QWORD PTR [rdi-8+rax*8]
+        movsd   xmm2, QWORD PTR [rdi-8+rdx*8]
+        mulsd   xmm1, QWORD PTR [rsi-8+rdx*8]
+        mulsd   xmm2, QWORD PTR [rsi-8+rax*8]
+        addsd   xmm1, xmm2
+        addsd   xmm0, xmm1
+        movsd   xmm1, QWORD PTR [r10+rax*8]
+        mulsd   xmm1, xmm0
+        mulsd   xmm1, QWORD PTR [r10+rdx*8]
+        comisd  xmm1, QWORD PTR [rcx+rax*8]
+        jbe     .L17
+        mov     QWORD PTR [r8+rax*8], rdx
+        movsd   QWORD PTR [rcx+rax*8], xmm1
+.L17:
+        comisd  xmm1, QWORD PTR [rcx+rdx*8]
+        jbe     .L19
+        mov     QWORD PTR [r8+rdx*8], rax
+        movsd   QWORD PTR [rcx+rdx*8], xmm1
+.L19:
+        add     rax, 1
+        add     rdx, 1
+        cmp     rax, r11
+        jne     .L21
+.L15:
+        ret
+scamp_thread_reduce_scalar:
+        push    rbx
+        mov     rbx, rdx
+        test    r9, r9
+        jle     .L30
+        mov     rax, QWORD PTR [rsp+16]
+        mov     r10, rsi
+        xor     edx, edx
+        xor     r11d, r11d
+        movsd   xmm1, QWORD PTR .LC1[rip]
+        lea     rsi, [0+rax*8]
+        lea     rax, [0+r8*8]
+.L29:
+        movsd   xmm0, QWORD PTR [rdi+rax]
+        comisd  xmm0, xmm1
+        jbe     .L27
+        mov     r11, QWORD PTR [r10+rax]
+        movapd  xmm1, xmm0
+.L27:
+        add     rdx, 1
+        add     rax, rsi
+        cmp     r9, rdx
+        jne     .L29
+        mov     QWORD PTR [rcx+r8*8], r11
+        movsd   QWORD PTR [rbx+r8*8], xmm1
+        pop     rbx
+        ret
+.L30:
+        movsd   xmm1, QWORD PTR .LC1[rip]
+        xor     r11d, r11d
+        mov     QWORD PTR [rcx+r8*8], r11
+        movsd   QWORD PTR [rbx+r8*8], xmm1
+        pop     rbx
+        ret
+.LC1:
+        .long   0
+        .long   -1048576

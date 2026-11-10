@@ -1,0 +1,76 @@
+scrimp_diag_loop_avx2_vectorized:
+        push    rbp
+        vxorps  xmm4, xmm4, xmm4
+        add     r9, 1
+        mov     rbp, rsp
+        push    r13
+        mov     rax, QWORD PTR [rbp+24]
+        mov     r13, QWORD PTR [rbp+16]
+        push    r12
+        push    rbx
+        vcvtsi2sd       xmm4, xmm4, rax
+        cmp     r9, r13
+        jge     .L9
+        mov     r10, rsi
+        mov     r11, rdx
+        lea     rbx, [rdi+rax*8]
+        mov     r12, rcx
+        vmovapd ymm3, ymm0
+        vbroadcastsd    ymm4, xmm4
+        mov     eax, 1
+        vbroadcastsd    ymm5, QWORD PTR .LC1[rip]
+        lea     rsi, [0+r9*8]
+        lea     rdx, [rcx+rsi]
+        add     rsi, r8
+.L4:
+        vbroadcastsd    ymm1, QWORD PTR [rdi-8+rax*8]
+        vmulpd  ymm1, ymm1, YMMWORD PTR [rdi-8+r9*8]
+        vbroadcastsd    ymm0, QWORD PTR [rbx-8+rax*8]
+        vfmsub132pd     ymm0, ymm1, YMMWORD PTR [rbx-8+r9*8]
+        vbroadcastsd    ymm1, QWORD PTR [r11+rax*8]
+        vmulpd  ymm1, ymm1, YMMWORD PTR [r11+r9*8]
+        vaddpd  ymm3, ymm3, ymm0
+        vbroadcastsd    ymm0, QWORD PTR [r10+rax*8]
+        vmulpd  ymm0, ymm0, YMMWORD PTR [r10+r9*8]
+        vfnmadd132pd    ymm0, ymm3, ymm4
+        vdivpd  ymm0, ymm0, ymm1
+        vsubpd  ymm0, ymm4, ymm0
+        vaddpd  ymm0, ymm0, ymm0
+        vcmppd  ymm2, ymm0, ymm0, 7
+        vblendvpd       ymm2, ymm5, ymm0, ymm2
+        vmovapd xmm1, xmm2
+        vextractf128    xmm2, ymm2, 0x1
+        vminpd  xmm1, xmm1, xmm2
+        vpermilpd       xmm2, xmm1, 1
+        vminpd  xmm1, xmm1, xmm2
+        vminsd  xmm1, xmm1, QWORD PTR [r12+rax*8]
+        vbroadcastsd    ymm2, xmm1
+        vcmppd  ymm2, ymm0, ymm2, 0
+        vmovmskpd       ecx, ymm2
+        test    ecx, ecx
+        je      .L3
+        rep bsf ecx, ecx
+        vmovsd  QWORD PTR [r12+rax*8], xmm1
+        add     rcx, r9
+        mov     QWORD PTR [r8+rax*8], rcx
+.L3:
+        vcmppd  ymm1, ymm0, YMMWORD PTR [rdx], 17
+        vmovq   xmm6, rax
+        add     r9, 1
+        add     rax, 1
+        vmaskmovpd      YMMWORD PTR [rdx], ymm1, ymm0
+        vpbroadcastq    ymm0, xmm6
+        add     rdx, 8
+        vpmaskmovq      YMMWORD PTR [rsi], ymm1, ymm0
+        add     rsi, 8
+        cmp     r13, r9
+        jne     .L4
+.L9:
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     rbp
+        ret
+.LC1:
+        .long   0
+        .long   2146435072

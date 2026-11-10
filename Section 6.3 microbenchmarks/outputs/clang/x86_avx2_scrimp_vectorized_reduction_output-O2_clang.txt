@@ -1,0 +1,50 @@
+.LCPI0_0:
+        .quad   0x7ff0000000000000
+scrimp_diag_step_avx2_vectorized:
+        mov     rax, qword ptr [rsp + 8]
+        mov     r10, qword ptr [rsp + 16]
+        lea     r11, [rdi + 8*r9]
+        vbroadcastsd    ymm1, qword ptr [r11 + 8*r10 - 8]
+        vbroadcastsd    ymm2, qword ptr [rdi + 8*r9 - 8]
+        vmulpd  ymm2, ymm2, ymmword ptr [rdi + 8*rax - 8]
+        lea     rdi, [rdi + 8*rax]
+        vfmsub231pd     ymm2, ymm1, ymmword ptr [rdi + 8*r10 - 8]
+        vaddpd  ymm0, ymm2, ymm0
+        vbroadcastsd    ymm1, qword ptr [rsi + 8*r9]
+        vbroadcastsd    ymm2, qword ptr [rdx + 8*r9]
+        vcvtsi2sd       xmm3, xmm3, r10
+        vmulpd  ymm1, ymm1, ymmword ptr [rsi + 8*rax]
+        vbroadcastsd    ymm3, xmm3
+        vmulpd  ymm1, ymm3, ymm1
+        vmulpd  ymm2, ymm2, ymmword ptr [rdx + 8*rax]
+        vsubpd  ymm1, ymm0, ymm1
+        vdivpd  ymm1, ymm1, ymm2
+        vsubpd  ymm1, ymm3, ymm1
+        vaddpd  ymm1, ymm1, ymm1
+        vxorpd  xmm2, xmm2, xmm2
+        vcmpordpd       ymm2, ymm1, ymm2
+        vbroadcastsd    ymm3, qword ptr [rip + .LCPI0_0]
+        vblendvpd       ymm2, ymm3, ymm1, ymm2
+        vextractf128    xmm3, ymm2, 1
+        vminpd  xmm2, xmm2, xmm3
+        vshufpd xmm3, xmm2, xmm2, 1
+        vminsd  xmm2, xmm2, xmm3
+        vminsd  xmm2, xmm2, qword ptr [rcx + 8*r9]
+        vbroadcastsd    ymm3, xmm2
+        vcmpeqpd        ymm3, ymm1, ymm3
+        vmovmskpd       edx, ymm3
+        test    edx, edx
+        je      .LBB0_2
+        movzx   edx, dl
+        rep       bsf edx, edx
+        vmovsd  qword ptr [rcx + 8*r9], xmm2
+        add     rdx, rax
+        mov     qword ptr [r8 + 8*r9], rdx
+.LBB0_2:
+        vcmpltpd        ymm2, ymm1, ymmword ptr [rcx + 8*rax]
+        vmaskmovpd      ymmword ptr [rcx + 8*rax], ymm2, ymm1
+        vmovq   xmm1, r9
+        vpbroadcastq    ymm1, xmm1
+        vpmaskmovq      ymmword ptr [r8 + 8*rax], ymm2, ymm1
+        ret
+

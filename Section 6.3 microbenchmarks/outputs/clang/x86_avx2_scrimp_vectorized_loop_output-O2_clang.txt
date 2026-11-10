@@ -1,0 +1,93 @@
+.LCPI0_0:
+        .quad   0x7ff0000000000000
+scrimp_diag_loop_avx2_vectorized:
+        push    rbp
+        push    r15
+        push    r14
+        push    r13
+        push    r12
+        push    rbx
+        mov     qword ptr [rsp - 16], r8
+        mov     r14, qword ptr [rsp + 56]
+        lea     rax, [r9 + 1]
+        mov     qword ptr [rsp - 8], rax
+        cmp     rax, r14
+        jge     .LBB0_5
+        mov     rax, qword ptr [rsp + 64]
+        vcvtsi2sd       xmm1, xmm1, rax
+        vbroadcastsd    ymm1, xmm1
+        lea     r11, [8*r9]
+        lea     r10, [rdi + 8*r9]
+        lea     r11, [r11 + 8*rax]
+        add     r11, rdi
+        mov     rbx, r9
+        not     rbx
+        add     rbx, r14
+        lea     r14, [rsi + 8*r9]
+        add     r14, 8
+        lea     r15, [rdx + 8*r9 + 8]
+        lea     r12, [rcx + 8*r9 + 8]
+        mov     r8, qword ptr [rsp - 16]
+        lea     r9, [r8 + 8*r9]
+        add     r9, 8
+        lea     r13, [rdi + 8*rax]
+        xor     ebp, ebp
+        vxorpd  xmm2, xmm2, xmm2
+        vbroadcastsd    ymm3, qword ptr [rip + .LCPI0_0]
+        jmp     .LBB0_2
+.LBB0_4:
+        vcmpltpd        ymm5, ymm4, ymmword ptr [r12 + 8*rbp]
+        vmaskmovpd      ymmword ptr [r12 + 8*rbp], ymm5, ymm4
+        lea     rax, [rbp + 1]
+        vmovq   xmm4, rax
+        vpbroadcastq    ymm4, xmm4
+        vpmaskmovq      ymmword ptr [r9 + 8*rbp], ymm5, ymm4
+        mov     rbp, rax
+        cmp     rbx, rax
+        je      .LBB0_5
+.LBB0_2:
+        vbroadcastsd    ymm4, qword ptr [r13 + 8*rbp]
+        vbroadcastsd    ymm5, qword ptr [rdi + 8*rbp]
+        vmulpd  ymm5, ymm5, ymmword ptr [r10 + 8*rbp]
+        vfmsub231pd     ymm5, ymm4, ymmword ptr [r11 + 8*rbp]
+        vbroadcastsd    ymm4, qword ptr [rsi + 8*rbp + 8]
+        vbroadcastsd    ymm6, qword ptr [rdx + 8*rbp + 8]
+        vmulpd  ymm4, ymm4, ymmword ptr [r14 + 8*rbp]
+        vaddpd  ymm0, ymm0, ymm5
+        vmulpd  ymm4, ymm1, ymm4
+        vmulpd  ymm5, ymm6, ymmword ptr [r15 + 8*rbp]
+        vsubpd  ymm4, ymm0, ymm4
+        vdivpd  ymm4, ymm4, ymm5
+        vsubpd  ymm4, ymm1, ymm4
+        vaddpd  ymm4, ymm4, ymm4
+        vcmpordpd       ymm5, ymm4, ymm2
+        vblendvpd       ymm5, ymm3, ymm4, ymm5
+        vextractf128    xmm6, ymm5, 1
+        vminpd  xmm5, xmm5, xmm6
+        vshufpd xmm6, xmm5, xmm5, 1
+        vminsd  xmm5, xmm5, xmm6
+        vminsd  xmm5, xmm5, qword ptr [rcx + 8*rbp + 8]
+        vbroadcastsd    ymm6, xmm5
+        vcmpeqpd        ymm6, ymm4, ymm6
+        vmovmskpd       eax, ymm6
+        test    eax, eax
+        je      .LBB0_4
+        movzx   eax, al
+        rep       bsf eax, eax
+        vmovsd  qword ptr [rcx + 8*rbp + 8], xmm5
+        mov     r8, qword ptr [rsp - 8]
+        add     r8, rbp
+        add     rax, r8
+        mov     r8, qword ptr [rsp - 16]
+        mov     qword ptr [r8 + 8*rbp + 8], rax
+        jmp     .LBB0_4
+.LBB0_5:
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     r15
+        pop     rbp
+        vzeroupper
+        ret
+

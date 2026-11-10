@@ -1,0 +1,159 @@
+scrimp_init_dot_scalar:
+        lea     rax, [rsi+rdx]
+        test    rdx, rdx
+        jle     .L4
+        mov     rdx, rsi
+        pxor    xmm1, xmm1
+        neg     rdx
+        lea     rdx, [rdi+rdx*8]
+.L3:
+        movsd   xmm0, QWORD PTR [rdi+rsi*8]
+        mulsd   xmm0, QWORD PTR [rdx+rsi*8]
+        add     rsi, 1
+        addsd   xmm1, xmm0
+        cmp     rsi, rax
+        jl      .L3
+        movapd  xmm0, xmm1
+        ret
+.L4:
+        pxor    xmm1, xmm1
+        movapd  xmm0, xmm1
+        ret
+scrimp_diag_step_scalar:
+        push    r13
+        mov     r11, rdx
+        mov     r10, rcx
+        push    r12
+        push    rbp
+        push    rbx
+        mov     rax, QWORD PTR [rsp+40]
+        mov     rdx, QWORD PTR [rsp+48]
+        mov     rbp, QWORD PTR [rsp+56]
+        lea     rbx, [0+rax*8]
+        lea     r13, [rdx+rbp]
+        lea     rcx, [0+rdx*8]
+        movsd   xmm2, QWORD PTR [r11+rdx*8]
+        mulsd   xmm2, QWORD PTR [r11+rax*8]
+        lea     r12, [rbp+0+rax]
+        movsd   xmm1, QWORD PTR [rsi-8+rcx]
+        movsd   xmm0, QWORD PTR [rsi-8+r13*8]
+        add     rcx, r8
+        mulsd   xmm1, QWORD PTR [rsi-8+rax*8]
+        mulsd   xmm0, QWORD PTR [rsi-8+r12*8]
+        subsd   xmm0, xmm1
+        pxor    xmm1, xmm1
+        addsd   xmm0, QWORD PTR [rdi]
+        cvtsi2sd        xmm1, rbp
+        movsd   QWORD PTR [rdi], xmm0
+        mulsd   xmm2, xmm1
+        subsd   xmm0, xmm2
+        movsd   xmm2, QWORD PTR [r10+rdx*8]
+        mulsd   xmm2, QWORD PTR [r10+rax*8]
+        divsd   xmm0, xmm2
+        subsd   xmm1, xmm0
+        addsd   xmm1, xmm1
+        movapd  xmm0, xmm1
+        movsd   xmm1, QWORD PTR [rcx]
+        comisd  xmm1, xmm0
+        jbe     .L8
+        mov     QWORD PTR [r9+rdx*8], rax
+        movsd   QWORD PTR [rcx], xmm0
+.L8:
+        add     r8, rbx
+        movsd   xmm1, QWORD PTR [r8]
+        comisd  xmm1, xmm0
+        jbe     .L7
+        mov     QWORD PTR [r9+rax*8], rdx
+        movsd   QWORD PTR [r8], xmm0
+.L7:
+        pop     rbx
+        pop     rbp
+        pop     r12
+        pop     r13
+        ret
+scrimp_diag_loop_scalar:
+        mov     r11, QWORD PTR [rsp+8]
+        mov     r10, rdx
+        lea     rdx, [r9+1]
+        mov     rax, QWORD PTR [rsp+16]
+        movapd  xmm2, xmm0
+        cmp     rdx, r11
+        jge     .L15
+        pxor    xmm3, xmm3
+        sub     r11, r9
+        lea     r9, [rdi+rax*8]
+        cvtsi2sd        xmm3, rax
+        mov     eax, 1
+.L21:
+        movsd   xmm0, QWORD PTR [r9-8+rdx*8]
+        movsd   xmm1, QWORD PTR [rdi-8+rdx*8]
+        mulsd   xmm0, QWORD PTR [r9-8+rax*8]
+        mulsd   xmm1, QWORD PTR [rdi-8+rax*8]
+        subsd   xmm0, xmm1
+        addsd   xmm2, xmm0
+        movsd   xmm0, QWORD PTR [rsi+rdx*8]
+        mulsd   xmm0, QWORD PTR [rsi+rax*8]
+        movapd  xmm1, xmm2
+        mulsd   xmm0, xmm3
+        subsd   xmm1, xmm0
+        movsd   xmm0, QWORD PTR [r10+rdx*8]
+        mulsd   xmm0, QWORD PTR [r10+rax*8]
+        divsd   xmm1, xmm0
+        movapd  xmm0, xmm3
+        subsd   xmm0, xmm1
+        movsd   xmm1, QWORD PTR [rcx+rdx*8]
+        addsd   xmm0, xmm0
+        comisd  xmm1, xmm0
+        jbe     .L17
+        mov     QWORD PTR [r8+rdx*8], rax
+        movsd   QWORD PTR [rcx+rdx*8], xmm0
+.L17:
+        movsd   xmm1, QWORD PTR [rcx+rax*8]
+        comisd  xmm1, xmm0
+        jbe     .L19
+        mov     QWORD PTR [r8+rax*8], rdx
+        movsd   QWORD PTR [rcx+rax*8], xmm0
+.L19:
+        add     rax, 1
+        add     rdx, 1
+        cmp     rax, r11
+        jne     .L21
+.L15:
+        ret
+scrimp_thread_reduce_scalar:
+        push    rbx
+        mov     rbx, rdx
+        test    r9, r9
+        jle     .L31
+        mov     rax, QWORD PTR [rsp+16]
+        mov     r10, rsi
+        xor     edx, edx
+        xor     r11d, r11d
+        movsd   xmm1, QWORD PTR .LC1[rip]
+        lea     rsi, [0+rax*8]
+        lea     rax, [0+r8*8]
+.L30:
+        movsd   xmm0, QWORD PTR [rdi+rax]
+        comisd  xmm1, xmm0
+        jbe     .L28
+        mov     r11, QWORD PTR [r10+rax]
+        movapd  xmm1, xmm0
+.L28:
+        add     rdx, 1
+        add     rax, rsi
+        cmp     r9, rdx
+        jne     .L30
+        mov     QWORD PTR [rcx+r8*8], r11
+        movsd   QWORD PTR [rbx+r8*8], xmm1
+        pop     rbx
+        ret
+.L31:
+        movsd   xmm1, QWORD PTR .LC1[rip]
+        xor     r11d, r11d
+        mov     QWORD PTR [rcx+r8*8], r11
+        movsd   QWORD PTR [rbx+r8*8], xmm1
+        pop     rbx
+        ret
+.LC1:
+        .long   0
+        .long   2146435072

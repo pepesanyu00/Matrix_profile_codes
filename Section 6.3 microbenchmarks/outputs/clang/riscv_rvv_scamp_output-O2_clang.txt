@@ -1,0 +1,178 @@
+scamp_init_covariance_rvv:
+        vsetvli zero, a4, e64, m1, ta, ma
+        vmv.v.i v8, 0
+        beqz    a3, .LBB0_3
+        slli    a2, a2, 3
+        add     a4, a1, a2
+        vle64.v v9, (a4)
+        vlse64.v        v10, (a1), zero
+.LBB0_2:
+        add     a1, a0, a2
+        vle64.v v11, (a1)
+        vlse64.v        v12, (a0), zero
+        vfsub.vv        v11, v11, v9
+        vfsub.vv        v12, v12, v10
+        vfmacc.vv       v8, v12, v11
+        addi    a3, a3, -1
+        addi    a0, a0, 8
+        bnez    a3, .LBB0_2
+.LBB0_3:
+        ret
+
+scamp_diag_step_rvv:
+        slli    t0, a6, 3
+        addi    t1, t0, -8
+        add     t2, a0, t1
+        vsetvli zero, a7, e64, m1, ta, ma
+        vle64.v v9, (t2)
+        add     t1, t1, a1
+        vle64.v v10, (t1)
+        slli    a7, a5, 3
+        addi    t1, a7, -8
+        add     a0, a0, t1
+        add     a1, a1, t1
+        vlse64.v        v11, (a1), zero
+        vlse64.v        v12, (a0), zero
+        vfmul.vv        v9, v9, v11
+        vfmacc.vv       v9, v10, v12
+        add     a0, a2, a7
+        vlse64.v        v10, (a0), zero
+        add     a2, a2, t0
+        vle64.v v11, (a2)
+        add     a0, a3, a7
+        fld     fa5, 0(a0)
+        vfadd.vv        v8, v8, v9
+        vfmul.vv        v9, v8, v10
+        vfmul.vv        v9, v9, v11
+        vfmv.s.f        v10, fa5
+        vfredmax.vs     v10, v9, v10
+        vfmv.f.s        fa5, v10
+        vmfeq.vf        v10, v9, fa5
+        vfirst.m        a1, v10
+        li      a2, -1
+        beq     a1, a2, .LBB1_2
+        fsd     fa5, 0(a0)
+        add     a1, a1, a6
+        add     a7, a7, a4
+        sd      a1, 0(a7)
+.LBB1_2:
+        add     a3, a3, t0
+        vle64.v v10, (a3)
+        vmflt.vv        v0, v10, v9
+        vse64.v v9, (a3), v0.t
+        add     a4, a4, t0
+        vmv.v.x v9, a5
+        vse64.v v9, (a4), v0.t
+        ret
+
+scamp_diag_loop_rvv:
+        addi    sp, sp, -32
+        sd      s0, 24(sp)
+        sd      s1, 16(sp)
+        sd      s2, 8(sp)
+        addi    s1, a5, 1
+        vsetvli a7, zero, e64, m1, ta, ma
+        bgeu    s1, a6, .LBB2_7
+        li      t0, 0
+        slli    s1, a5, 3
+        add     t1, a1, s1
+        add     t2, a0, s1
+        not     s0, a5
+        add     a6, a6, s0
+        addi    t5, s1, 8
+        add     t3, a2, t5
+        add     t4, a3, t5
+        add     t5, t5, a4
+        addi    a2, a2, 8
+        addi    a3, a3, 8
+        addi    t6, a4, 8
+        li      a4, 1
+        li      s2, -1
+        j       .LBB2_3
+.LBB2_2:
+        add     s0, t4, t0
+        vle64.v v10, (s0)
+        vmflt.vv        v0, v10, v9
+        vse64.v v9, (s0), v0.t
+        add     s0, t5, t0
+        vmv.v.x v9, a4
+        vse64.v v9, (s0), v0.t
+        addi    a4, a4, 1
+        addi    a6, a6, -1
+        addi    t0, t0, 8
+        beqz    a6, .LBB2_7
+.LBB2_3:
+        mv      s1, a6
+        bltu    a6, a7, .LBB2_5
+        mv      s1, a7
+.LBB2_5:
+        add     s0, t2, t0
+        vsetvli zero, s1, e64, m1, ta, ma
+        vle64.v v9, (s0)
+        add     s0, t1, t0
+        vle64.v v10, (s0)
+        add     s0, a0, t0
+        add     s1, a1, t0
+        vlse64.v        v11, (s1), zero
+        vlse64.v        v12, (s0), zero
+        vfmul.vv        v9, v9, v11
+        vfmacc.vv       v9, v10, v12
+        add     s0, a2, t0
+        vlse64.v        v10, (s0), zero
+        add     s0, t3, t0
+        vle64.v v11, (s0)
+        add     s1, a3, t0
+        fld     fa5, 0(s1)
+        vfadd.vv        v8, v8, v9
+        vfmul.vv        v9, v8, v10
+        vfmul.vv        v9, v9, v11
+        vfmv.s.f        v10, fa5
+        vfredmax.vs     v10, v9, v10
+        vfmv.f.s        fa5, v10
+        vmfeq.vf        v10, v9, fa5
+        vfirst.m        s0, v10
+        beq     s0, s2, .LBB2_2
+        fsd     fa5, 0(s1)
+        add     s0, s0, a5
+        add     s0, s0, a4
+        add     s1, t6, t0
+        sd      s0, 0(s1)
+        j       .LBB2_2
+.LBB2_7:
+        ld      s0, 24(sp)
+        ld      s1, 16(sp)
+        ld      s2, 8(sp)
+        addi    sp, sp, 32
+        ret
+
+.LCPI3_0:
+        .quad   0xfff0000000000000
+scamp_thread_reduce_rvv:
+.Lpcrel_hi0:
+        auipc   t0, %pcrel_hi(.LCPI3_0)
+        addi    t0, t0, %pcrel_lo(.Lpcrel_hi0)
+        vsetvli zero, a7, e64, m1, ta, ma
+        vlse64.v        v8, (t0), zero
+        vmv.v.i v9, -1
+        slli    a4, a4, 3
+        beqz    a5, .LBB3_3
+        add     a1, a1, a4
+        slli    a6, a6, 3
+        add     a0, a0, a4
+.LBB3_2:
+        vsetvli zero, zero, e64, m1, ta, mu
+        vle64.v v10, (a0)
+        vmflt.vv        v0, v8, v10
+        vle64.v v9, (a1), v0.t
+        vmerge.vvm      v8, v8, v10, v0
+        addi    a5, a5, -1
+        add     a1, a1, a6
+        add     a0, a0, a6
+        bnez    a5, .LBB3_2
+.LBB3_3:
+        add     a2, a2, a4
+        vsetvli zero, zero, e64, m1, ta, ma
+        vse64.v v8, (a2)
+        add     a3, a3, a4
+        vse64.v v9, (a3)
+        ret

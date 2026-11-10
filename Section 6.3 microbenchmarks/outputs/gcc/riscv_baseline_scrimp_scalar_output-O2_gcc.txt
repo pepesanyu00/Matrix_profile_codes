@@ -1,0 +1,172 @@
+scrimp_init_dot_scalar:
+        fmv.d.x fa0,zero
+        add     a3,a1,a2
+        ble     a2,zero,.L4
+        slli    a4,a1,3
+        add     a0,a0,a4
+        neg     a4,a4
+.L3:
+        add     a5,a0,a4
+        fld     fa4,0(a0)
+        fld     fa5,0(a5)
+        addi    a1,a1,1
+        addi    a0,a0,8
+        fmadd.d fa0,fa4,fa5,fa0
+        blt     a1,a3,.L3
+        ret
+.L4:
+        ret
+scrimp_diag_step_scalar:
+        slli    t1,a7,3
+        slli    t4,a6,3
+        add     t5,a1,t1
+        add     t3,a1,t4
+        fld     fa5,-8(t3)
+        fld     fa4,-8(t5)
+        ld      t5,0(sp)
+        fmul.d  fa4,fa4,fa5
+        add     t3,a7,t5
+        add     t6,t5,a6
+        slli    t3,t3,3
+        slli    t6,t6,3
+        add     t3,a1,t3
+        add     a1,a1,t6
+        fld     fa3,-8(a1)
+        fld     fa5,-8(t3)
+        add     a1,a2,t1
+        add     a2,a2,t4
+        fmsub.d fa5,fa5,fa3,fa4
+        fld     fa2,0(a2)
+        fld     fa3,0(a0)
+        fld     fa4,0(a1)
+        add     a2,a3,t1
+        add     a3,a3,t4
+        fmul.d  fa4,fa4,fa2
+        fadd.d  fa3,fa3,fa5
+        fld     fa1,0(a3)
+        fcvt.d.l        fa5,t5
+        fld     fa2,0(a2)
+        add     a3,a4,t1
+        fmul.d  fa2,fa2,fa1
+        fnmsub.d        fa4,fa5,fa4,fa3
+        fld     fa1,0(a3)
+        fsd     fa3,0(a0)
+        fdiv.d  fa4,fa4,fa2
+        fsub.d  fa5,fa5,fa4
+        fadd.d  fa5,fa5,fa5
+        fgt.d   a2,fa1,fa5
+        beq     a2,zero,.L8
+        add     t1,a5,t1
+        sd      a6,0(t1)
+        fsd     fa5,0(a3)
+.L8:
+        add     a4,a4,t4
+        fld     fa4,0(a4)
+        fgt.d   a3,fa4,fa5
+        beq     a3,zero,.L7
+        add     a5,a5,t4
+        sd      a7,0(a5)
+        fsd     fa5,0(a4)
+.L7:
+        ret
+scrimp_diag_loop_scalar:
+        addi    t1,a5,1
+        bge     t1,a6,.L14
+        slli    t1,a5,3
+        fcvt.d.l        fa2,a7
+        slli    a7,a7,3
+        add     t5,a3,t1
+        sub     t0,a6,a5
+        add     t6,a0,a7
+        addi    a6,t1,8
+        li      a7,1
+        addi    t1,a3,8
+        li      a3,8
+.L20:
+        add     t4,a0,a6
+        add     t3,a0,a3
+        fld     fa5,-8(t3)
+        fld     fa4,-8(t4)
+        add     t3,t6,a3
+        add     t4,t6,a6
+        fmul.d  fa4,fa4,fa5
+        fld     ft0,-8(t3)
+        fld     fa3,-8(t4)
+        add     t3,a1,a3
+        add     t4,a1,a6
+        fld     fa1,0(t3)
+        fld     fa5,0(t4)
+        fmsub.d fa3,fa3,ft0,fa4
+        add     t4,a2,a6
+        fmul.d  fa5,fa5,fa1
+        add     t3,a2,a3
+        fld     fa4,0(t4)
+        fld     ft0,0(t3)
+        fld     fa1,8(t5)
+        fadd.d  fa0,fa0,fa3
+        fmul.d  fa4,fa4,ft0
+        add     t3,a4,a6
+        fnmsub.d        fa5,fa5,fa2,fa0
+        fdiv.d  fa5,fa5,fa4
+        fsub.d  fa5,fa2,fa5
+        fadd.d  fa5,fa5,fa5
+        fgt.d   t4,fa1,fa5
+        beq     t4,zero,.L16
+        fsd     fa5,8(t5)
+        sd      a7,0(t3)
+.L16:
+        fld     fa4,0(t1)
+        add     t3,a4,a3
+        add     t4,a7,a5
+        fgt.d   t2,fa4,fa5
+        beq     t2,zero,.L18
+        fsd     fa5,0(t1)
+        sd      t4,0(t3)
+.L18:
+        addi    a7,a7,1
+        addi    t5,t5,8
+        addi    t1,t1,8
+        addi    a6,a6,8
+        addi    a3,a3,8
+        bne     a7,t0,.L20
+.L14:
+        ret
+scrimp_thread_reduce_scalar:
+        ble     a5,zero,.L30
+        lui     a7,%hi(.LC0)
+        slli    a4,a4,3
+        fld     fa4,%lo(.LC0)(a7)
+        add     a0,a0,a4
+        add     a1,a1,a4
+        slli    a6,a6,3
+        li      a7,0
+        li      t3,0
+.L29:
+        fld     fa5,0(a0)
+        flt.d   t1,fa5,fa4
+        beq     t1,zero,.L27
+        fmv.d   fa4,fa5
+        ld      t3,0(a1)
+.L27:
+        addi    a7,a7,1
+        add     a0,a0,a6
+        add     a1,a1,a6
+        bne     a5,a7,.L29
+        add     a2,a2,a4
+        add     a3,a3,a4
+        fsd     fa4,0(a2)
+        sd      t3,0(a3)
+        ret
+.L30:
+        lui     a5,%hi(.LC0)
+        fld     fa4,%lo(.LC0)(a5)
+        slli    a4,a4,3
+        li      t3,0
+        add     a2,a2,a4
+        add     a3,a3,a4
+        fsd     fa4,0(a2)
+        sd      t3,0(a3)
+        ret
+.LC0:
+        .word   0
+        .word   2146435072

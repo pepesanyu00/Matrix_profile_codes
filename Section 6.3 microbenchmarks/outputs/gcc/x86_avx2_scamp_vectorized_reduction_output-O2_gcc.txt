@@ -1,0 +1,48 @@
+scamp_diag_step_avx2_vectorized:
+        push    rbp
+        mov     rax, rcx
+        vbroadcastsd    ymm1, QWORD PTR [rsi-8+r9*8]
+        vmovapd ymm3, ymm0
+        vbroadcastsd    ymm2, QWORD PTR .LC1[rip]
+        vbroadcastsd    ymm0, QWORD PTR [rdi-8+r9*8]
+        mov     rbp, rsp
+        mov     rcx, QWORD PTR [rbp+16]
+        vmulpd  ymm1, ymm1, YMMWORD PTR [rdi-8+rcx*8]
+        lea     r10, [0+rcx*8]
+        vfmadd132pd     ymm0, ymm1, YMMWORD PTR [rsi-8+rcx*8]
+        lea     rsi, [rax+r9*8]
+        vmovsd  xmm4, QWORD PTR [rsi]
+        vaddpd  ymm3, ymm3, ymm0
+        vbroadcastsd    ymm0, QWORD PTR [rdx+r9*8]
+        vmulpd  ymm0, ymm0, ymm3
+        vmulpd  ymm0, ymm0, YMMWORD PTR [rdx+rcx*8]
+        vcmppd  ymm1, ymm0, ymm0, 7
+        vblendvpd       ymm2, ymm2, ymm0, ymm1
+        vmovapd xmm1, xmm2
+        vextractf128    xmm2, ymm2, 0x1
+        vmaxpd  xmm1, xmm1, xmm2
+        vpermilpd       xmm2, xmm1, 1
+        vmaxpd  xmm1, xmm1, xmm2
+        vmaxsd  xmm2, xmm1, xmm4
+        vbroadcastsd    ymm1, xmm2
+        vcmppd  ymm1, ymm0, ymm1, 0
+        vmovmskpd       edx, ymm1
+        test    edx, edx
+        je      .L4
+        rep bsf edx, edx
+        vmovsd  QWORD PTR [rsi], xmm2
+        add     rdx, rcx
+        mov     QWORD PTR [r8+r9*8], rdx
+.L4:
+        add     rax, r10
+        vmovq   xmm5, r9
+        vcmppd  ymm1, ymm0, YMMWORD PTR [rax], 30
+        vmaskmovpd      YMMWORD PTR [rax], ymm1, ymm0
+        vpbroadcastq    ymm0, xmm5
+        vpmaskmovq      YMMWORD PTR [r8+r10], ymm1, ymm0
+        vmovapd ymm0, ymm3
+        pop     rbp
+        ret
+.LC1:
+        .long   0
+        .long   -1048576

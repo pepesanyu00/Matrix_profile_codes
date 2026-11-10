@@ -1,0 +1,151 @@
+scamp_init_covariance_scalar:
+        slli    a2,a2,3
+        add     a5,a1,a2
+        fld     fa3,0(a5)
+        fld     fa2,0(a1)
+        fmv.d.x fa0,zero
+        ble     a3,zero,.L4
+        slli    a3,a3,3
+        add     a4,a0,a3
+.L3:
+        add     a5,a0,a2
+        fld     fa5,0(a0)
+        fld     fa4,0(a5)
+        addi    a0,a0,8
+        fsub.d  fa5,fa5,fa2
+        fsub.d  fa4,fa4,fa3
+        fmadd.d fa0,fa4,fa5,fa0
+        bne     a4,a0,.L3
+        ret
+.L4:
+        ret
+scamp_diag_step_scalar:
+        slli    t1,a6,3
+        slli    t3,a7,3
+        add     t0,a2,t1
+        add     t6,a1,t3
+        fld     fa4,-8(t0)
+        fld     fa5,-8(t6)
+        add     a2,a2,t3
+        add     a1,a1,t1
+        fmul.d  fa5,fa5,fa4
+        fld     fa2,-8(a2)
+        fld     fa3,-8(a1)
+        fld     fa4,0(a0)
+        add     a2,a3,t1
+        add     a3,a3,t3
+        fmadd.d fa3,fa3,fa2,fa5
+        fld     fa5,0(a2)
+        fld     fa2,0(a3)
+        add     a3,a4,t1
+        fadd.d  fa4,fa4,fa3
+        fld     fa3,0(a3)
+        fmul.d  fa5,fa4,fa5
+        fsd     fa4,0(a0)
+        fmul.d  fa5,fa5,fa2
+        flt.d   a2,fa3,fa5
+        beq     a2,zero,.L8
+        add     t1,a5,t1
+        sd      a7,0(t1)
+        fsd     fa5,0(a3)
+.L8:
+        add     a4,a4,t3
+        fld     fa4,0(a4)
+        flt.d   a3,fa4,fa5
+        beq     a3,zero,.L7
+        add     a5,a5,t3
+        sd      a6,0(a5)
+        fsd     fa5,0(a4)
+.L7:
+        ret
+scamp_diag_loop_scalar:
+        mv      t6,a6
+        addi    a6,a5,1
+        bge     a6,t6,.L14
+        slli    a6,a5,3
+        add     t5,a3,a6
+        sub     t6,t6,a5
+        addi    a6,a6,8
+        addi    a3,a3,8
+        li      a7,8
+        li      t1,1
+.L20:
+        add     t4,a0,a6
+        add     t3,a1,a7
+        fld     fa5,-8(t3)
+        fld     fa3,-8(t4)
+        add     t3,a1,a6
+        add     t4,a0,a7
+        fmul.d  fa3,fa3,fa5
+        fld     fa4,-8(t4)
+        fld     fa1,-8(t3)
+        add     t3,a2,a7
+        fld     fa5,0(t3)
+        add     t3,a2,a6
+        fld     fa2,0(t3)
+        fmadd.d fa4,fa4,fa1,fa3
+        fld     fa3,0(a3)
+        add     t3,a4,a7
+        add     t4,t1,a5
+        fadd.d  fa0,fa0,fa4
+        fmul.d  fa5,fa0,fa5
+        fmul.d  fa5,fa5,fa2
+        flt.d   t0,fa3,fa5
+        beq     t0,zero,.L16
+        fsd     fa5,0(a3)
+        sd      t4,0(t3)
+.L16:
+        fld     fa4,8(t5)
+        add     t3,a4,a6
+        flt.d   t4,fa4,fa5
+        beq     t4,zero,.L18
+        fsd     fa5,8(t5)
+        sd      t1,0(t3)
+.L18:
+        addi    t1,t1,1
+        addi    a3,a3,8
+        addi    t5,t5,8
+        addi    a7,a7,8
+        addi    a6,a6,8
+        bne     t1,t6,.L20
+.L14:
+        ret
+scamp_thread_reduce_scalar:
+        ble     a5,zero,.L29
+        lui     a7,%hi(.LC0)
+        slli    a4,a4,3
+        fld     fa4,%lo(.LC0)(a7)
+        add     a0,a0,a4
+        add     a1,a1,a4
+        slli    a6,a6,3
+        li      a7,0
+        li      t3,0
+.L28:
+        fld     fa5,0(a0)
+        fgt.d   t1,fa5,fa4
+        beq     t1,zero,.L26
+        fmv.d   fa4,fa5
+        ld      t3,0(a1)
+.L26:
+        addi    a7,a7,1
+        add     a0,a0,a6
+        add     a1,a1,a6
+        bne     a5,a7,.L28
+        add     a2,a2,a4
+        add     a3,a3,a4
+        fsd     fa4,0(a2)
+        sd      t3,0(a3)
+        ret
+.L29:
+        lui     a5,%hi(.LC0)
+        fld     fa4,%lo(.LC0)(a5)
+        slli    a4,a4,3
+        li      t3,0
+        add     a2,a2,a4
+        add     a3,a3,a4
+        fsd     fa4,0(a2)
+        sd      t3,0(a3)
+        ret
+.LC0:
+        .word   0
+        .word   -1048576

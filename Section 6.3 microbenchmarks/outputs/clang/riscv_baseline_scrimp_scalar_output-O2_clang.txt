@@ -1,0 +1,188 @@
+scrimp_init_dot_scalar:
+        blez    a2, .LBB0_4
+        add     a2, a2, a1
+        slli    a3, a1, 3
+        fmv.d.x fa0, zero
+.LBB0_2:
+        add     a4, a0, a3
+        fld     fa5, 0(a4)
+        fld     fa4, 0(a0)
+        fmadd.d fa0, fa5, fa4, fa0
+        addi    a1, a1, 1
+        addi    a0, a0, 8
+        blt     a1, a2, .LBB0_2
+        ret
+.LBB0_4:
+        fmv.d.x fa0, zero
+        ret
+
+scrimp_diag_step_scalar:
+        ld      t2, 0(sp)
+        slli    t1, a7, 3
+        add     t3, a1, t1
+        slli    t4, t2, 3
+        add     t0, t3, t4
+        fld     fa5, -8(t0)
+        slli    t0, a6, 3
+        add     a1, a1, t0
+        fld     fa4, -8(t3)
+        fld     fa3, -8(a1)
+        add     a1, a1, t4
+        fld     fa2, -8(a1)
+        fneg.d  fa4, fa4
+        fmul.d  fa4, fa3, fa4
+        fld     fa3, 0(a0)
+        fmadd.d fa5, fa5, fa2, fa4
+        add     a1, a2, t1
+        fld     fa4, 0(a1)
+        fadd.d  fa3, fa3, fa5
+        add     a2, a2, t0
+        fld     fa5, 0(a2)
+        fneg.d  fa4, fa4
+        add     a1, a3, t1
+        fld     fa2, 0(a1)
+        add     a3, a3, t0
+        fld     fa1, 0(a3)
+        fmul.d  fa5, fa5, fa4
+        fcvt.d.l        fa4, t2
+        fmadd.d fa5, fa5, fa4, fa3
+        fmul.d  fa2, fa2, fa1
+        add     a1, a4, t1
+        fld     fa1, 0(a1)
+        fdiv.d  fa5, fa5, fa2
+        fsub.d  fa5, fa4, fa5
+        fadd.d  fa5, fa5, fa5
+        flt.d   a2, fa5, fa1
+        fsd     fa3, 0(a0)
+        beqz    a2, .LBB1_2
+        fsd     fa5, 0(a1)
+        add     t1, t1, a5
+        sd      a6, 0(t1)
+.LBB1_2:
+        add     a4, a4, t0
+        fld     fa4, 0(a4)
+        flt.d   a0, fa5, fa4
+        beqz    a0, .LBB1_4
+        fsd     fa5, 0(a4)
+        add     a5, a5, t0
+        sd      a7, 0(a5)
+.LBB1_4:
+        ret
+
+scrimp_diag_loop_scalar:
+        addi    sp, sp, -32
+        sd      s0, 24(sp)
+        sd      s1, 16(sp)
+        sd      s2, 8(sp)
+        addi    s1, a5, 1
+        bge     s1, a6, .LBB2_7
+        li      t0, 0
+        fcvt.d.l        fa5, a7
+        sub     a6, a6, a5
+        slli    s1, a5, 3
+        add     t1, a0, s1
+        slli    s0, a7, 3
+        add     a7, s0, s1
+        add     a7, a7, a0
+        addi    t5, s1, 8
+        add     t2, a1, t5
+        add     t3, a2, t5
+        add     t4, a3, t5
+        add     t5, t5, a4
+        addi    s2, a1, 8
+        addi    a2, a2, 8
+        addi    a3, a3, 8
+        addi    t6, a4, 8
+        add     a4, a0, s0
+        li      s0, 1
+        j       .LBB2_3
+.LBB2_2:
+        addi    s0, s0, 1
+        addi    t0, t0, 8
+        beq     a6, s0, .LBB2_7
+.LBB2_3:
+        add     s1, t1, t0
+        add     a1, a7, t0
+        fld     fa4, 0(a1)
+        add     a1, a4, t0
+        fld     fa3, 0(s1)
+        add     s1, a0, t0
+        fld     fa2, 0(s1)
+        fld     fa1, 0(a1)
+        fneg.d  fa3, fa3
+        fmul.d  fa3, fa2, fa3
+        fmadd.d fa4, fa4, fa1, fa3
+        fadd.d  fa0, fa0, fa4
+        add     a1, t2, t0
+        fld     fa4, 0(a1)
+        add     a1, s2, t0
+        fld     fa3, 0(a1)
+        add     a1, t3, t0
+        fld     fa2, 0(a1)
+        add     a1, a2, t0
+        fld     fa1, 0(a1)
+        fneg.d  fa4, fa4
+        fmul.d  fa4, fa3, fa4
+        fmadd.d fa4, fa4, fa5, fa0
+        fmul.d  fa3, fa2, fa1
+        add     s1, t4, t0
+        fld     fa2, 0(s1)
+        fdiv.d  fa4, fa4, fa3
+        fsub.d  fa4, fa5, fa4
+        fadd.d  fa4, fa4, fa4
+        flt.d   a1, fa4, fa2
+        beqz    a1, .LBB2_5
+        fsd     fa4, 0(s1)
+        add     a1, t5, t0
+        sd      s0, 0(a1)
+.LBB2_5:
+        add     s1, a3, t0
+        fld     fa3, 0(s1)
+        flt.d   a1, fa4, fa3
+        beqz    a1, .LBB2_2
+        add     a1, a5, s0
+        fsd     fa4, 0(s1)
+        add     s1, t6, t0
+        sd      a1, 0(s1)
+        j       .LBB2_2
+.LBB2_7:
+        ld      s0, 24(sp)
+        ld      s1, 16(sp)
+        ld      s2, 8(sp)
+        addi    sp, sp, 32
+        ret
+
+.LCPI3_0:
+        .quad   0x7ff0000000000000
+scrimp_thread_reduce_scalar:
+.Lpcrel_hi0:
+        auipc   t0, %pcrel_hi(.LCPI3_0)
+        slli    a7, a4, 3
+        blez    a5, .LBB3_5
+        li      t1, 0
+        fld     fa5, %pcrel_lo(.Lpcrel_hi0)(t0)
+        add     a0, a0, a7
+        slli    a6, a6, 3
+        add     a1, a1, a7
+        j       .LBB3_3
+.LBB3_2:
+        addi    a5, a5, -1
+        add     a0, a0, a6
+        add     a1, a1, a6
+        beqz    a5, .LBB3_6
+.LBB3_3:
+        fld     fa4, 0(a0)
+        flt.d   a4, fa4, fa5
+        beqz    a4, .LBB3_2
+        ld      t1, 0(a1)
+        fmv.d   fa5, fa4
+        j       .LBB3_2
+.LBB3_5:
+        fld     fa5, %pcrel_lo(.Lpcrel_hi0)(t0)
+        li      t1, 0
+.LBB3_6:
+        add     a2, a2, a7
+        fsd     fa5, 0(a2)
+        add     a3, a3, a7
+        sd      t1, 0(a3)
+        ret

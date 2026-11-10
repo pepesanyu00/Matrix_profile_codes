@@ -1,0 +1,156 @@
+scrimp_init_dot_scalar:
+        cmp     x2, #1
+        b.lt    .LBB0_4
+        movi    d0, #0000000000000000
+        mov     x8, xzr
+        add     x9, x2, x1
+.LBB0_2:
+        ldr     d1, [x0, x1, lsl #3]
+        ldr     d2, [x0, x8]
+        add     x1, x1, #1
+        cmp     x1, x9
+        add     x8, x8, #8
+        fmadd   d0, d1, d2, d0
+        b.lt    .LBB0_2
+        ret
+.LBB0_4:
+        movi    d0, #0000000000000000
+        ret
+
+scrimp_diag_step_scalar:
+        lsl     x9, x7, #3
+        lsl     x8, x6, #3
+        ldr     x10, [sp]
+        add     x11, x1, x9
+        add     x12, x1, x8
+        lsl     x13, x10, #3
+        ldur    d0, [x11, #-8]
+        ldur    d1, [x12, #-8]
+        ldr     d3, [x2, x8]
+        add     x11, x11, x13
+        add     x12, x12, x13
+        ldr     d4, [x3, x8]
+        fnmul   d0, d0, d1
+        ldur    d1, [x11, #-8]
+        ldur    d2, [x12, #-8]
+        fmadd   d0, d1, d2, d0
+        ldr     d1, [x0]
+        ldr     d2, [x2, x9]
+        fnmul   d2, d2, d3
+        ldr     d3, [x3, x9]
+        fadd    d1, d1, d0
+        scvtf   d0, x10
+        fmul    d3, d3, d4
+        fmadd   d2, d2, d0, d1
+        str     d1, [x0]
+        fdiv    d2, d2, d3
+        fsub    d0, d0, d2
+        ldr     d2, [x4, x9]
+        fadd    d0, d0, d0
+        fcmp    d0, d2
+        b.pl    .LBB1_2
+        str     d0, [x4, x9]
+        str     x6, [x5, x9]
+.LBB1_2:
+        ldr     d1, [x4, x6, lsl #3]
+        fcmp    d0, d1
+        b.pl    .LBB1_4
+        str     d0, [x4, x8]
+        str     x7, [x5, x8]
+.LBB1_4:
+        ret
+
+scrimp_diag_loop_scalar:
+        add     x8, x5, #1
+        cmp     x8, x6
+        b.ge    .LBB2_7
+        str     x19, [sp, #-16]!
+        lsl     x12, x5, #3
+        lsl     x19, x7, #3
+        scvtf   d1, x7
+        mvn     x10, x5
+        mov     x9, xzr
+        add     x17, x1, #8
+        add     x13, x19, x12
+        add     x16, x12, #8
+        add     x10, x10, x6
+        add     x11, x0, x12
+        add     x12, x0, x13
+        add     x13, x1, x16
+        add     x14, x2, x16
+        add     x15, x3, x16
+        add     x16, x4, x16
+        add     x18, x2, #8
+        add     x1, x3, #8
+        add     x2, x4, #8
+        add     x3, x0, x19
+        ldr     x19, [sp], #16
+        b       .LBB2_3
+.LBB2_2:
+        add     x9, x9, #1
+        cmp     x10, x9
+        b.eq    .LBB2_7
+.LBB2_3:
+        lsl     x4, x9, #3
+        ldr     d2, [x11, x4]
+        ldr     d3, [x0, x4]
+        ldr     d4, [x3, x4]
+        fnmul   d2, d2, d3
+        ldr     d3, [x12, x4]
+        fmadd   d2, d3, d4, d2
+        ldr     d3, [x13, x4]
+        ldr     d4, [x17, x4]
+        fadd    d0, d0, d2
+        fnmul   d2, d3, d4
+        ldr     d3, [x14, x4]
+        ldr     d4, [x18, x4]
+        fmul    d3, d3, d4
+        fmadd   d2, d2, d1, d0
+        fdiv    d2, d2, d3
+        ldr     d3, [x15, x4]
+        fsub    d2, d1, d2
+        fadd    d2, d2, d2
+        fcmp    d2, d3
+        b.pl    .LBB2_5
+        str     d2, [x15, x4]
+        add     x5, x9, #1
+        str     x5, [x16, x4]
+.LBB2_5:
+        ldr     d3, [x1, x9, lsl #3]
+        fcmp    d2, d3
+        b.pl    .LBB2_2
+        str     d2, [x1, x4]
+        add     x5, x8, x9
+        str     x5, [x2, x4]
+        b       .LBB2_2
+.LBB2_7:
+        ret
+
+scrimp_thread_reduce_scalar:
+        lsl     x8, x4, #3
+        cmp     x5, #1
+        mov     x9, xzr
+        b.lt    .LBB3_5
+        mov     x11, #9218868437227405312
+        lsl     x10, x6, #3
+        fmov    d0, x11
+        mov     x11, x8
+        b       .LBB3_3
+.LBB3_2:
+        subs    x5, x5, #1
+        add     x11, x11, x10
+        b.eq    .LBB3_6
+.LBB3_3:
+        ldr     d1, [x0, x11]
+        fcmp    d1, d0
+        b.pl    .LBB3_2
+        fmov    d0, d1
+        ldr     x9, [x1, x11]
+        b       .LBB3_2
+.LBB3_5:
+        mov     x10, #9218868437227405312
+        fmov    d0, x10
+.LBB3_6:
+        str     d0, [x2, x8]
+        str     x9, [x3, x8]
+        ret

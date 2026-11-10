@@ -1,0 +1,177 @@
+scamp_init_covariance_rvv:
+        fld     fa5,0(a1)
+        slli    a2,a2,3
+        vsetvli zero,a4,e64,m1,ta,ma
+        add     a5,a1,a2
+        vle64.v v11,0(a5)
+        vmv.v.i v8,0
+        vfmv.v.f        v12,fa5
+        beq     a3,zero,.L8
+        slli    a3,a3,3
+        add     a3,a0,a3
+.L3:
+        add     a5,a2,a0
+        fld     fa5,0(a0)
+        vle64.v v9,0(a5)
+        vmv1r.v v13,v8
+        vfmv.v.f        v10,fa5
+        addi    a0,a0,8
+        vfsub.vv        v10,v10,v12
+        vfsub.vv        v9,v9,v11
+        vmv1r.v v8,v9
+        vfmadd.vv       v8,v10,v13
+        bne     a0,a3,.L3
+.L8:
+        ret
+scamp_diag_step_rvv:
+        slli    t3,a6,3
+        addi    t5,t3,-8
+        vsetvli zero,a7,e64,m1,ta,ma
+        add     t1,a0,t5
+        vle64.v v11,0(t1)
+        slli    t1,a5,3
+        add     t6,a1,t1
+        fld     fa5,-8(t6)
+        add     a1,a1,t5
+        add     a0,a0,t1
+        vfmv.v.f        v9,fa5
+        vle64.v v12,0(a1)
+        fld     fa5,-8(a0)
+        vfmul.vv        v11,v11,v9
+        add     a1,a2,t1
+        vfmv.v.f        v9,fa5
+        fld     fa5,0(a1)
+        add     a2,a2,t3
+        add     a1,a3,t1
+        vmv1r.v v10,v9
+        vfmadd.vv       v10,v12,v11
+        vfmv.v.f        v9,fa5
+        vle64.v v11,0(a2)
+        fld     fa5,0(a1)
+        li      a0,-1
+        vfadd.vv        v8,v8,v10
+        vfmv.v.f        v10,fa5
+        vfmul.vv        v9,v8,v9
+        vfmul.vv        v9,v9,v11
+        vfredmax.vs     v10,v9,v10
+        vfmv.f.s        fa5,v10
+        vmfeq.vf        v10,v9,fa5
+        vfirst.m        a2,v10
+        beq     a2,a0,.L12
+        add     t1,a4,t1
+        add     a2,a2,a6
+        sd      a2,0(t1)
+        fsd     fa5,0(a1)
+.L12:
+        add     a3,a3,t3
+        vle64.v v0,0(a3)
+        vmv.v.x v10,a5
+        add     a4,a4,t3
+        vmfgt.vv        v0,v9,v0
+        vse64.v v9,0(a3),v0.t
+        vse64.v v10,0(a4),v0.t
+        ret
+scamp_diag_loop_rvv:
+        addi    a7,a5,1
+        bgeu    a7,a6,.L21
+        addi    sp,sp,-32
+        sd      s1,16(sp)
+        sd      s2,8(sp)
+        sd      s0,24(sp)
+        vsetvli s1,zero,e8,mf8,ta,ma
+        addi    a2,a2,8
+        addi    a3,a3,8
+        addi    a4,a4,8
+        sub     a6,a6,a5
+        slli    t3,a5,3
+        li      t1,1
+        li      s2,-1
+.L17:
+        sub     a7,a6,t1
+        add     s0,a0,t3
+        add     t2,a1,t3
+        add     t0,a2,t3
+        add     t4,a3,t3
+        add     t6,a4,t3
+        add     t5,a5,t1
+        bleu    a7,s1,.L15
+        mv      a7,s1
+.L15:
+        vsetvli zero,a7,e64,m1,ta,ma
+        fld     fa5,0(a1)
+        vle64.v v12,0(s0)
+        vle64.v v15,0(t2)
+        vfmv.v.f        v11,fa5
+        fld     fa5,0(a0)
+        vle64.v v14,0(t0)
+        vmv.v.x v13,t1
+        vfmul.vv        v12,v12,v11
+        vfmv.v.f        v10,fa5
+        fld     fa5,0(a2)
+        addi    t1,t1,1
+        addi    a0,a0,8
+        vfmv.v.f        v9,fa5
+        vfmadd.vv       v10,v15,v12
+        fld     fa5,0(a3)
+        addi    a1,a1,8
+        addi    a2,a2,8
+        vfmv.v.f        v11,fa5
+        vfadd.vv        v8,v8,v10
+        vfmul.vv        v9,v8,v9
+        vfmul.vv        v9,v9,v14
+        vfredmax.vs     v10,v9,v11
+        vfmv.f.s        fa5,v10
+        vmfeq.vf        v10,v9,fa5
+        vfirst.m        t0,v10
+        add     t5,t5,t0
+        beq     t0,s2,.L16
+        fsd     fa5,0(a3)
+        sd      t5,0(a4)
+.L16:
+        vle64.v v0,0(t4)
+        addi    a3,a3,8
+        addi    a4,a4,8
+        vmfgt.vv        v0,v9,v0
+        vse64.v v9,0(t4),v0.t
+        vse64.v v13,0(t6),v0.t
+        bne     t1,a6,.L17
+        ld      s0,24(sp)
+        ld      s1,16(sp)
+        ld      s2,8(sp)
+        addi    sp,sp,32
+        jr      ra
+.L21:
+        ret
+scamp_thread_reduce_rvv:
+        lui     t1,%hi(.LC0)
+        fld     fa5,%lo(.LC0)(t1)
+        fmv.d.x fa4,zero
+        vsetvli zero,a7,e64,m1,ta,ma
+        vmv.v.i v3,-1
+        fdiv.d  fa5,fa5,fa4
+        slli    a4,a4,3
+        vfmv.v.f        v1,fa5
+        beq     a5,zero,.L26
+        add     a0,a0,a4
+        add     a1,a1,a4
+        slli    a6,a6,3
+        li      t1,0
+.L27:
+        vle64.v v2,0(a0)
+        vle64.v v4,0(a1)
+        addi    t1,t1,1
+        add     a0,a0,a6
+        add     a1,a1,a6
+        vmfgt.vv        v0,v2,v1
+        vmerge.vvm      v1,v1,v2,v0
+        vmerge.vvm      v3,v3,v4,v0
+        bne     a5,t1,.L27
+.L26:
+        add     a2,a2,a4
+        vse64.v v1,0(a2)
+        add     a3,a3,a4
+        vse64.v v3,0(a3)
+        ret
+.LC0:
+        .word   0
+        .word   -1074790400

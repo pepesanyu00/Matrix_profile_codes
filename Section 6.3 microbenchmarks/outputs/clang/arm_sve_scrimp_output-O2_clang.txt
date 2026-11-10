@@ -1,0 +1,213 @@
+scrimp_init_dot_sve:
+        add     x8, x2, x1
+        cmp     x8, x1
+        b.ls    .LBB0_4
+        mov     z1.d, #0
+        lsl     x8, x1, #3
+        mov     z0.d, z1.d
+.LBB0_2:
+        mov     z3.d, z1.d
+        add     x9, x0, x8
+        subs    x2, x2, #1
+        ldr     d2, [x0], #8
+        ld1d    { z4.d }, p0/z, [x9]
+        mov     z3.d, p0/m, d2
+        fmla    z0.d, p0/m, z4.d, z3.d
+        b.ne    .LBB0_2
+        ret
+.LBB0_4:
+        mov     z0.d, #0
+        ret
+
+scrimp_diag_step_sve:
+        lsl     x8, x5, #3
+        add     x9, x0, x6, lsl #3
+        mov     x11, #-1
+        mov     z1.d, #0
+        ucvtf   d6, x7
+        ptrue   p1.d
+        add     x10, x0, x8
+        ld1d    { z2.d }, p0/z, [x9, x11, lsl #3]
+        sub     x9, x9, #8
+        add     x12, x10, x7, lsl #3
+        sub     x10, x10, #8
+        ld1d    { z3.d }, p0/z, [x9, x7, lsl #3]
+        ld1rd   { z5.d }, p0/z, [x10]
+        add     x9, x1, x8
+        cntp    x10, p0, p0.d
+        sub     x11, x12, #8
+        ld1rd   { z4.d }, p0/z, [x11]
+        fmul    z2.d, p0/m, z2.d, z5.d
+        ld1rd   { z5.d }, p0/z, [x9]
+        add     x9, x2, x8
+        fmul    z3.d, p0/m, z3.d, z4.d
+        ld1d    { z4.d }, p0/z, [x1, x6, lsl #3]
+        fmul    z4.d, p0/m, z4.d, z5.d
+        ld1rd   { z5.d }, p0/z, [x9]
+        add     x9, x3, x8
+        fsubr   z2.d, p0/m, z2.d, z3.d
+        mov     z3.d, z1.d
+        mov     z3.d, p0/m, d6
+        fadd    z0.d, p0/m, z0.d, z2.d
+        movprfx z2, z3
+        fmul    z2.d, p0/m, z2.d, z4.d
+        ld1d    { z4.d }, p0/z, [x2, x6, lsl #3]
+        fmul    z4.d, p0/m, z4.d, z5.d
+        mov     z5.d, z1.d
+        fsubr   z2.d, p0/m, z2.d, z0.d
+        fdiv    z2.d, p0/m, z2.d, z4.d
+        fmov    d4, #2.00000000
+        mov     z5.d, p0/m, d4
+        fsubr   z2.d, p0/m, z2.d, z3.d
+        ld1rd   { z3.d }, p1/z, [x9]
+        fmul    z2.d, p0/m, z2.d, z5.d
+        mov     z4.d, z2.d
+        fmin    z4.d, p0/m, z4.d, z3.d
+        fminv   d3, p0, z4.d
+        mov     z4.d, d3
+        fcmeq   p1.d, p0/z, z2.d, z4.d
+        brkb    p1.b, p0/z, p1.b
+        cntp    x9, p0, p1.d
+        cmn     x9, #1
+        ccmp    x9, x10, #4, ne
+        b.eq    .LBB1_2
+        str     d3, [x3, x8]
+        add     x9, x9, x6
+        str     x9, [x4, x8]
+.LBB1_2:
+        ucvtf   d3, x5
+        ld1d    { z4.d }, p0/z, [x3, x6, lsl #3]
+        fcmgt   p1.d, p0/z, z4.d, z2.d
+        fcvtzu  x8, d3
+        st1d    { z2.d }, p1, [x3, x6, lsl #3]
+        mov     z1.d, p0/m, x8
+        st1d    { z1.d }, p1, [x4, x6, lsl #3]
+        ret
+
+scrimp_diag_loop_sve:
+        add     x8, x5, #1
+        cmp     x8, x6
+        b.hs    .LBB2_6
+        str     x19, [sp, #-16]!
+        ptrue   p0.d
+        mvn     x12, x5
+        lsl     x14, x5, #3
+        lsl     x5, x7, #3
+        ucvtf   d1, x7
+        mov     z2.d, #0
+        fmov    d3, #2.00000000
+        add     x18, x14, #8
+        mov     x9, xzr
+        add     x15, x5, x14
+        mov     x11, xzr
+        cntd    x10
+        add     x12, x12, x6
+        add     x13, x0, x14
+        add     x14, x0, x15
+        add     x15, x1, x18
+        add     x16, x2, x18
+        add     x17, x3, x18
+        add     x18, x4, x18
+        add     x1, x1, #8
+        add     x2, x2, #8
+        add     x3, x3, #8
+        add     x4, x4, #8
+        add     x5, x0, x5
+        b       .LBB2_3
+.LBB2_2:
+        add     x6, x11, #1
+        ld1d    { z6.d }, p1/z, [x17, x11, lsl #3]
+        sub     x9, x9, #1
+        ucvtf   d5, x6
+        cmp     x12, x6
+        fcmgt   p2.d, p1/z, z6.d, z4.d
+        fcvtzu  x7, d5
+        mov     z5.d, z2.d
+        st1d    { z4.d }, p2, [x17, x11, lsl #3]
+        mov     z5.d, p1/m, x7
+        st1d    { z5.d }, p2, [x18, x11, lsl #3]
+        mov     x11, x6
+        b.eq    .LBB2_5
+.LBB2_3:
+        add     x6, x12, x9
+        cmp     x6, x10
+        csel    x6, x6, x10, lo
+        whilelo p1.d, xzr, x6
+        lsl     x6, x11, #3
+        add     x7, x5, x6
+        add     x19, x0, x6
+        ld1d    { z4.d }, p1/z, [x14, x11, lsl #3]
+        ld1d    { z5.d }, p1/z, [x13, x11, lsl #3]
+        ld1rd   { z6.d }, p1/z, [x7]
+        ld1rd   { z7.d }, p1/z, [x19]
+        add     x7, x1, x6
+        cntp    x19, p1, p1.d
+        fmul    z4.d, p1/m, z4.d, z6.d
+        ld1d    { z6.d }, p1/z, [x15, x11, lsl #3]
+        fmul    z5.d, p1/m, z5.d, z7.d
+        ld1rd   { z7.d }, p1/z, [x7]
+        add     x7, x2, x6
+        fmul    z6.d, p1/m, z6.d, z7.d
+        ld1rd   { z7.d }, p1/z, [x7]
+        add     x7, x3, x6
+        fsub    z4.d, p1/m, z4.d, z5.d
+        mov     z5.d, z2.d
+        mov     z5.d, p1/m, d1
+        fadd    z0.d, p1/m, z0.d, z4.d
+        movprfx z4, z5
+        fmul    z4.d, p1/m, z4.d, z6.d
+        ld1d    { z6.d }, p1/z, [x16, x11, lsl #3]
+        fmul    z6.d, p1/m, z6.d, z7.d
+        fsubr   z4.d, p1/m, z4.d, z0.d
+        fdiv    z4.d, p1/m, z4.d, z6.d
+        mov     z6.d, z2.d
+        mov     z6.d, p1/m, d3
+        fsubr   z4.d, p1/m, z4.d, z5.d
+        ld1rd   { z5.d }, p0/z, [x7]
+        fmul    z4.d, p1/m, z4.d, z6.d
+        mov     z6.d, z4.d
+        fmin    z6.d, p1/m, z6.d, z5.d
+        fminv   d5, p1, z6.d
+        mov     z6.d, d5
+        fcmeq   p2.d, p1/z, z4.d, z6.d
+        brkb    p2.b, p1/z, p2.b
+        cntp    x7, p1, p2.d
+        cmn     x7, #1
+        ccmp    x7, x19, #4, ne
+        b.eq    .LBB2_2
+        add     x7, x8, x7
+        str     d5, [x3, x6]
+        add     x7, x7, x11
+        str     x7, [x4, x6]
+        b       .LBB2_2
+.LBB2_5:
+        ldr     x19, [sp], #16
+.LBB2_6:
+        ret
+
+scrimp_thread_reduce_sve:
+        mov     z0.d, #0
+        mov     x8, #9218868437227405312
+        fmov    d2, x8
+        mov     w8, #1
+        mov     z1.d, z0.d
+        mov     z0.d, p0/m, x8
+        mov     z1.d, p0/m, d2
+        cbz     x5, .LBB3_3
+        lsl     x8, x4, #3
+        lsl     x9, x6, #3
+.LBB3_2:
+        add     x10, x0, x8
+        subs    x5, x5, #1
+        ld1d    { z2.d }, p0/z, [x10]
+        add     x10, x1, x8
+        add     x8, x8, x9
+        ld1d    { z3.d }, p0/z, [x10]
+        fcmgt   p1.d, p0/z, z1.d, z2.d
+        mov     z0.d, p1/m, z3.d
+        mov     z1.d, p1/m, z2.d
+        b.ne    .LBB3_2
+.LBB3_3:
+        st1d    { z1.d }, p0, [x2, x4, lsl #3]
+        st1d    { z0.d }, p0, [x3, x4, lsl #3]
+        ret

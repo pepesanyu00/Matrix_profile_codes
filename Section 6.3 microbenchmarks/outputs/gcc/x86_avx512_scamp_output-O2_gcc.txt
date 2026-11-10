@@ -1,0 +1,162 @@
+scamp_init_covariance_avx512:
+        mov     r8, rdx
+        vmovsd  xmm3, QWORD PTR [rsi]
+        lea     rdx, [0+rdx*8]
+        vmovupd zmm4, ZMMWORD PTR [rsi+r8*8]
+        test    rcx, rcx
+        jle     .L4
+        add     rcx, r8
+        lea     rax, [rdi+rdx]
+        vxorpd  xmm2, xmm2, xmm2
+        neg     rdx
+        lea     rcx, [rdi+rcx*8]
+.L3:
+        vmovsd  xmm0, QWORD PTR [rax+rdx]
+        vmovupd zmm1, ZMMWORD PTR [rax]
+        add     rax, 8
+        vsubsd  xmm0, xmm0, xmm3
+        vsubpd  zmm1, zmm1, zmm4
+        vbroadcastsd    zmm0, xmm0
+        vfmadd231pd     zmm2, zmm1, zmm0
+        cmp     rcx, rax
+        jne     .L3
+        vmovapd zmm0, zmm2
+        ret
+.L4:
+        vxorpd  xmm2, xmm2, xmm2
+        vmovapd zmm0, zmm2
+        ret
+scamp_diag_step_avx512:
+        push    rbp
+        lea     r10, [0+r9*8]
+        mov     rbp, rsp
+        push    rbx
+        mov     rbx, rdi
+        mov     rdi, rcx
+        and     rsp, -64
+        mov     rax, QWORD PTR [rbp+16]
+        vbroadcastsd    zmm1, QWORD PTR [rsi-8+r9*8]
+        vbroadcastsd    zmm3, QWORD PTR [rbx-8+r9*8]
+        vmulpd  zmm1, zmm1, ZMMWORD PTR [rbx-8+rax*8]
+        lea     r11, [0+rax*8]
+        vfmadd231pd     zmm1, zmm3, ZMMWORD PTR [rsi-8+rax*8]
+        lea     rsi, [rax+8]
+        vaddpd  zmm0, zmm0, zmm1
+        vmulpd  zmm2, zmm0, QWORD PTR [rdx+r9*8]{1to8}
+        vmulpd  zmm2, zmm2, ZMMWORD PTR [rdx+rax*8]
+        lea     rdx, [rcx+r10]
+        lea     rcx, [rsp-64]
+        sub     rcx, r11
+        vmovapd ZMMWORD PTR [rsp-64], zmm2
+.L10:
+        vmovsd  xmm1, QWORD PTR [rcx+rax*8]
+        vcomisd xmm1, QWORD PTR [rdx]
+        jbe     .L8
+        mov     QWORD PTR [r8+r10], rax
+        vmovsd  QWORD PTR [rdx], xmm1
+.L8:
+        add     rax, 1
+        cmp     rsi, rax
+        jne     .L10
+        lea     rax, [rdi+r11]
+        vpbroadcastq    zmm1, r9
+        vcmppd  k1, zmm2, ZMMWORD PTR [rax], 30
+        vmovupd ZMMWORD PTR [rax]{k1}, zmm2
+        vmovdqu64       ZMMWORD PTR [r8+r11]{k1}, zmm1
+        mov     rbx, QWORD PTR [rbp-8]
+        leave
+        ret
+scamp_diag_loop_avx512:
+        push    rbp
+        mov     rbp, rsp
+        push    r14
+        push    r13
+        push    r12
+        push    rbx
+        lea     rbx, [r9+1]
+        and     rsp, -64
+        mov     r14, QWORD PTR [rbp+16]
+        cmp     rbx, r14
+        jge     .L24
+        lea     r10, [rsp-64]
+        add     r9, 9
+        lea     r13, [0+rbx*8]
+        mov     r11d, 1
+        lea     r12, [rcx+r13]
+        sub     r10, r13
+        add     rcx, 8
+.L19:
+        vbroadcastsd    zmm1, QWORD PTR [rsi-8+r11*8]
+        vmulpd  zmm1, zmm1, ZMMWORD PTR [rdi-8+rbx*8]
+        mov     rax, rbx
+        vbroadcastsd    zmm3, QWORD PTR [rdi-8+r11*8]
+        vfmadd231pd     zmm1, zmm3, ZMMWORD PTR [rsi-8+rbx*8]
+        vaddpd  zmm0, zmm0, zmm1
+        vmulpd  zmm2, zmm0, QWORD PTR [rdx+r11*8]{1to8}
+        vmulpd  zmm2, zmm2, ZMMWORD PTR [rdx+rbx*8]
+        vmovapd ZMMWORD PTR [rsp-64], zmm2
+.L18:
+        vmovsd  xmm1, QWORD PTR [r10+rax*8]
+        vcomisd xmm1, QWORD PTR [rcx]
+        jbe     .L16
+        mov     QWORD PTR [r8+r11*8], rax
+        vmovsd  QWORD PTR [rcx], xmm1
+.L16:
+        add     rax, 1
+        cmp     rax, r9
+        jne     .L18
+        add     rbx, 1
+        add     r9, 1
+        add     rcx, 8
+        sub     r10, 8
+        vcmppd  k1, zmm2, ZMMWORD PTR [r12], 30
+        vpbroadcastq    zmm1, r11
+        add     r11, 1
+        vmovupd ZMMWORD PTR [r12]{k1}, zmm2
+        add     r12, 8
+        vmovdqu64       ZMMWORD PTR [r8+r13]{k1}, zmm1
+        cmp     r14, rbx
+        je      .L24
+        lea     r13, [0+rbx*8]
+        jmp     .L19
+.L24:
+        lea     rsp, [rbp-32]
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     rbp
+        ret
+scamp_thread_reduce_avx512:
+        vxorpd  xmm1, xmm1, xmm1
+        push    rbp
+        vpxor   xmm2, xmm2, xmm2
+        vmovsd  xmm0, QWORD PTR .LC0[rip]
+        vpternlogd      zmm2, zmm2, zmm2, 0xFF
+        vdivsd  xmm0, xmm0, xmm1
+        mov     rbp, rsp
+        vbroadcastsd    zmm0, xmm0
+        test    r9, r9
+        jle     .L27
+        mov     rax, QWORD PTR [rbp+16]
+        xor     r10d, r10d
+        lea     r11, [0+rax*8]
+        lea     rax, [0+r8*8]
+.L28:
+        vmovupd zmm1, ZMMWORD PTR [rdi+rax]
+        add     r10, 1
+        vcmppd  k1, zmm1, zmm0, 30
+        vmovdqu64       zmm2{k1}, ZMMWORD PTR [rsi+rax]
+        vmovapd zmm0{k1}, zmm1
+        add     rax, r11
+        cmp     r9, r10
+        jne     .L28
+.L27:
+        vmovupd ZMMWORD PTR [rdx+r8*8], zmm0
+        vmovdqu64       ZMMWORD PTR [rcx+r8*8], zmm2
+        vzeroupper
+        pop     rbp
+        ret
+.LC0:
+        .long   0
+        .long   -1074790400

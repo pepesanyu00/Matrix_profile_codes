@@ -1,0 +1,207 @@
+scamp_init_covariance_scalar:
+        test    rcx, rcx
+        jle     .LBB0_1
+        movsd   xmm1, qword ptr [rsi + 8*rdx]
+        movsd   xmm2, qword ptr [rsi]
+        cmp     rcx, 1
+        jne     .LBB0_7
+        xorpd   xmm0, xmm0
+        xor     eax, eax
+        jmp     .LBB0_4
+.LBB0_1:
+        xorps   xmm0, xmm0
+        ret
+.LBB0_7:
+        movabs  rsi, 9223372036854775806
+        and     rsi, rcx
+        lea     r8, [rdi + 8]
+        lea     r9, [rdi + 8*rdx]
+        add     r9, 8
+        xorpd   xmm3, xmm3
+        xor     eax, eax
+.LBB0_8:
+        movsd   xmm4, qword ptr [r9 + 8*rax - 8]
+        movsd   xmm5, qword ptr [r9 + 8*rax]
+        subsd   xmm4, xmm1
+        movsd   xmm6, qword ptr [r8 + 8*rax - 8]
+        movsd   xmm0, qword ptr [r8 + 8*rax]
+        subsd   xmm6, xmm2
+        mulsd   xmm6, xmm4
+        addsd   xmm6, xmm3
+        subsd   xmm5, xmm1
+        subsd   xmm0, xmm2
+        mulsd   xmm0, xmm5
+        addsd   xmm0, xmm6
+        add     rax, 2
+        movapd  xmm3, xmm0
+        cmp     rsi, rax
+        jne     .LBB0_8
+.LBB0_4:
+        test    cl, 1
+        je      .LBB0_6
+        lea     rcx, [rdi + 8*rax]
+        movsd   xmm3, qword ptr [rcx + 8*rdx]
+        subsd   xmm3, xmm1
+        movsd   xmm1, qword ptr [rdi + 8*rax]
+        subsd   xmm1, xmm2
+        mulsd   xmm1, xmm3
+        addsd   xmm1, xmm0
+        movapd  xmm0, xmm1
+.LBB0_6:
+        ret
+
+scamp_diag_step_scalar:
+        mov     rax, qword ptr [rsp + 16]
+        mov     r10, qword ptr [rsp + 8]
+        movsd   xmm0, qword ptr [rsi + 8*r10 - 8]
+        movsd   xmm1, qword ptr [rsi + 8*rax - 8]
+        mulsd   xmm1, qword ptr [rdx + 8*r10 - 8]
+        mulsd   xmm0, qword ptr [rdx + 8*rax - 8]
+        addsd   xmm0, xmm1
+        addsd   xmm0, qword ptr [rdi]
+        movsd   qword ptr [rdi], xmm0
+        mulsd   xmm0, qword ptr [rcx + 8*r10]
+        mulsd   xmm0, qword ptr [rcx + 8*rax]
+        ucomisd xmm0, qword ptr [r8 + 8*r10]
+        ja      .LBB1_1
+        ucomisd xmm0, qword ptr [r8 + 8*rax]
+        ja      .LBB1_3
+.LBB1_4:
+        ret
+.LBB1_1:
+        movsd   qword ptr [r8 + 8*r10], xmm0
+        mov     qword ptr [r9 + 8*r10], rax
+        ucomisd xmm0, qword ptr [r8 + 8*rax]
+        jbe     .LBB1_4
+.LBB1_3:
+        movsd   qword ptr [r8 + 8*rax], xmm0
+        mov     qword ptr [r9 + 8*rax], r10
+        ret
+
+scamp_diag_loop_scalar:
+        push    r15
+        push    r14
+        push    r13
+        push    r12
+        push    rbx
+        mov     r14, qword ptr [rsp + 48]
+        lea     rax, [r9 + 1]
+        cmp     rax, r14
+        jge     .LBB2_7
+        lea     r10, [rdi + 8*r9]
+        lea     r11, [rsi + 8*r9]
+        mov     rbx, r9
+        not     rbx
+        add     rbx, r14
+        lea     r14, [rdx + 8*r9]
+        add     r14, 8
+        lea     r15, [rcx + 8*r9]
+        add     r15, 8
+        lea     r9, [r8 + 8*r9]
+        add     r9, 8
+        xor     r12d, r12d
+        jmp     .LBB2_2
+.LBB2_6:
+        mov     r12, r13
+        cmp     rbx, r13
+        je      .LBB2_7
+.LBB2_2:
+        movapd  xmm1, xmm0
+        movsd   xmm0, qword ptr [rdi + 8*r12]
+        movsd   xmm2, qword ptr [r10 + 8*r12]
+        mulsd   xmm2, qword ptr [rsi + 8*r12]
+        mulsd   xmm0, qword ptr [r11 + 8*r12]
+        addsd   xmm0, xmm2
+        addsd   xmm0, xmm1
+        movsd   xmm1, qword ptr [rdx + 8*r12 + 8]
+        mulsd   xmm1, xmm0
+        mulsd   xmm1, qword ptr [r14 + 8*r12]
+        ucomisd xmm1, qword ptr [rcx + 8*r12 + 8]
+        jbe     .LBB2_4
+        lea     r13, [rax + r12]
+        movsd   qword ptr [rcx + 8*r12 + 8], xmm1
+        mov     qword ptr [r8 + 8*r12 + 8], r13
+.LBB2_4:
+        lea     r13, [r12 + 1]
+        ucomisd xmm1, qword ptr [r15 + 8*r12]
+        jbe     .LBB2_6
+        movsd   qword ptr [r15 + 8*r12], xmm1
+        mov     qword ptr [r9 + 8*r12], r13
+        jmp     .LBB2_6
+.LBB2_7:
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     r15
+        ret
+
+.LCPI3_0:
+        .quad   0xfff0000000000000
+scamp_thread_reduce_scalar:
+        test    r9, r9
+        jle     .LBB3_1
+        push    r15
+        push    r14
+        push    r13
+        push    r12
+        push    rbx
+        mov     rax, qword ptr [rsp + 48]
+        cmp     r9, 1
+        jne     .LBB3_8
+        movsd   xmm0, qword ptr [rip + .LCPI3_0]
+        xor     r10d, r10d
+        xor     r11d, r11d
+.LBB3_4:
+        test    r9b, 1
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     r15
+        je      .LBB3_7
+        imul    r10, rax
+        add     r10, r8
+        movsd   xmm1, qword ptr [rdi + 8*r10]
+        ucomisd xmm1, xmm0
+        jbe     .LBB3_7
+        mov     r11, qword ptr [rsi + 8*r10]
+        movapd  xmm0, xmm1
+        jmp     .LBB3_7
+.LBB3_1:
+        movsd   xmm0, qword ptr [rip + .LCPI3_0]
+        xor     r11d, r11d
+.LBB3_7:
+        movsd   qword ptr [rdx + 8*r8], xmm0
+        mov     qword ptr [rcx + 8*r8], r11
+        ret
+.LBB3_8:
+        movabs  rbx, 9223372036854775806
+        and     rbx, r9
+        lea     r14, [rsi + 8*rax]
+        lea     r15, [8*r8]
+        mov     r12, rax
+        shl     r12, 4
+        lea     r13, [rdi + 8*rax]
+        movsd   xmm0, qword ptr [rip + .LCPI3_0]
+        xor     r10d, r10d
+        xor     r11d, r11d
+        jmp     .LBB3_9
+.LBB3_13:
+        add     r10, 2
+        add     r15, r12
+        cmp     rbx, r10
+        je      .LBB3_4
+.LBB3_9:
+        movsd   xmm1, qword ptr [rdi + r15]
+        ucomisd xmm1, xmm0
+        jbe     .LBB3_11
+        mov     r11, qword ptr [rsi + r15]
+        movapd  xmm0, xmm1
+.LBB3_11:
+        movsd   xmm1, qword ptr [r13 + r15]
+        ucomisd xmm1, xmm0
+        jbe     .LBB3_13
+        mov     r11, qword ptr [r14 + r15]
+        movapd  xmm0, xmm1
+        jmp     .LBB3_13

@@ -1,0 +1,250 @@
+scrimp_init_dot_avx2:
+        test    rdx, rdx
+        jle     .LBB0_1
+        add     rdx, rsi
+        vxorpd  xmm0, xmm0, xmm0
+        xor     eax, eax
+.LBB0_4:
+        vbroadcastsd    ymm1, qword ptr [rdi + rax]
+        vfmadd231pd     ymm0, ymm1, ymmword ptr [rdi + 8*rsi]
+        inc     rsi
+        add     rax, 8
+        cmp     rsi, rdx
+        jl      .LBB0_4
+        ret
+.LBB0_1:
+        vxorps  xmm0, xmm0, xmm0
+        ret
+
+scrimp_diag_step_avx2:
+        push    rbx
+        mov     rax, qword ptr [rsp + 16]
+        mov     r10, qword ptr [rsp + 24]
+        lea     r11, [rdi + 8*rax]
+        lea     rbx, [rdi + 8*r9]
+        vbroadcastsd    ymm1, qword ptr [rbx + 8*r10 - 8]
+        vbroadcastsd    ymm2, qword ptr [rdi + 8*r9 - 8]
+        vmulpd  ymm2, ymm2, ymmword ptr [rdi + 8*rax - 8]
+        vfmsub231pd     ymm2, ymm1, ymmword ptr [r11 + 8*r10 - 8]
+        vbroadcastsd    ymm1, qword ptr [rsi + 8*r9]
+        vbroadcastsd    ymm3, qword ptr [rdx + 8*r9]
+        vcvtsi2sd       xmm4, xmm4, r10
+        vaddpd  ymm0, ymm2, ymm0
+        vbroadcastsd    ymm2, xmm4
+        vmulpd  ymm1, ymm1, ymmword ptr [rsi + 8*rax]
+        vmulpd  ymm1, ymm2, ymm1
+        vmulpd  ymm3, ymm3, ymmword ptr [rdx + 8*rax]
+        vsubpd  ymm1, ymm0, ymm1
+        vdivpd  ymm1, ymm1, ymm3
+        vsubpd  ymm1, ymm2, ymm1
+        vaddpd  ymm1, ymm1, ymm1
+        vmovsd  xmm2, qword ptr [rcx + 8*r9]
+        vucomisd        xmm2, xmm1
+        jbe     .LBB1_2
+        vmovsd  qword ptr [rcx + 8*r9], xmm1
+        mov     qword ptr [r8 + 8*r9], rax
+        vmovapd xmm2, xmm1
+.LBB1_2:
+        vshufpd xmm3, xmm1, xmm1, 1
+        vucomisd        xmm2, xmm3
+        jbe     .LBB1_4
+        vmovsd  qword ptr [rcx + 8*r9], xmm3
+        lea     rdx, [rax + 1]
+        mov     qword ptr [r8 + 8*r9], rdx
+        vmovapd xmm2, xmm3
+.LBB1_4:
+        vextractf128    xmm3, ymm1, 1
+        vucomisd        xmm2, xmm3
+        jbe     .LBB1_6
+        vmovsd  qword ptr [rcx + 8*r9], xmm3
+        lea     rdx, [rax + 2]
+        mov     qword ptr [r8 + 8*r9], rdx
+        vmovapd xmm2, xmm3
+.LBB1_6:
+        vshufpd xmm3, xmm3, xmm3, 1
+        vucomisd        xmm2, xmm3
+        jbe     .LBB1_8
+        vmovsd  qword ptr [rcx + 8*r9], xmm3
+        lea     rdx, [rax + 3]
+        mov     qword ptr [r8 + 8*r9], rdx
+.LBB1_8:
+        vcmpltpd        ymm2, ymm1, ymmword ptr [rcx + 8*rax]
+        vmaskmovpd      ymmword ptr [rcx + 8*rax], ymm2, ymm1
+        vmovq   xmm1, r9
+        vpbroadcastq    ymm1, xmm1
+        vpmaskmovq      ymmword ptr [r8 + 8*rax], ymm2, ymm1
+        pop     rbx
+        ret
+
+scrimp_diag_loop_avx2:
+        push    rbp
+        push    r15
+        push    r14
+        push    r13
+        push    r12
+        push    rbx
+        mov     qword ptr [rsp - 8], rdx
+        mov     qword ptr [rsp - 16], rsi
+        mov     rbx, qword ptr [rsp + 56]
+        lea     rax, [r9 + 1]
+        cmp     rax, rbx
+        jge     .LBB2_11
+        mov     r13, qword ptr [rsp + 64]
+        vcvtsi2sd       xmm1, xmm1, r13
+        vbroadcastsd    ymm1, xmm1
+        lea     r10, [8*r9]
+        lea     rsi, [rdi + 8*r9]
+        lea     r10, [r10 + 8*r13]
+        add     r10, rdi
+        mov     rdx, r9
+        sub     rdx, rbx
+        inc     rdx
+        mov     rax, qword ptr [rsp - 16]
+        lea     rbx, [rax + 8*r9]
+        add     rbx, 8
+        mov     rax, qword ptr [rsp - 8]
+        lea     r14, [rax + 8*r9 + 8]
+        lea     r15, [rcx + 8*r9]
+        add     r15, 8
+        lea     r12, [r8 + 8*r9]
+        add     r12, 8
+        lea     r13, [rdi + 8*r13]
+        xor     ebp, ebp
+        jmp     .LBB2_2
+.LBB2_10:
+        vcmpltpd        ymm3, ymm2, ymmword ptr [r15 + 8*rbp]
+        vmaskmovpd      ymmword ptr [r15 + 8*rbp], ymm3, ymm2
+        lea     rax, [rbp + 1]
+        vmovq   xmm2, rax
+        vpbroadcastq    ymm2, xmm2
+        vpmaskmovq      ymmword ptr [r12 + 8*rbp], ymm3, ymm2
+        mov     r11, rdx
+        mov     rbp, rax
+        add     r11, rax
+        je      .LBB2_11
+.LBB2_2:
+        vbroadcastsd    ymm2, qword ptr [r13 + 8*rbp]
+        vbroadcastsd    ymm3, qword ptr [rdi + 8*rbp]
+        vmulpd  ymm3, ymm3, ymmword ptr [rsi + 8*rbp]
+        vfmsub231pd     ymm3, ymm2, ymmword ptr [r10 + 8*rbp]
+        vaddpd  ymm0, ymm0, ymm3
+        mov     rax, qword ptr [rsp - 16]
+        vbroadcastsd    ymm2, qword ptr [rax + 8*rbp + 8]
+        mov     rax, qword ptr [rsp - 8]
+        vbroadcastsd    ymm3, qword ptr [rax + 8*rbp + 8]
+        vmulpd  ymm2, ymm2, ymmword ptr [rbx + 8*rbp]
+        vmulpd  ymm2, ymm1, ymm2
+        vmulpd  ymm3, ymm3, ymmword ptr [r14 + 8*rbp]
+        vsubpd  ymm2, ymm0, ymm2
+        vdivpd  ymm2, ymm2, ymm3
+        vsubpd  ymm2, ymm1, ymm2
+        vaddpd  ymm2, ymm2, ymm2
+        vmovsd  xmm3, qword ptr [rcx + 8*rbp + 8]
+        vucomisd        xmm3, xmm2
+        jbe     .LBB2_4
+        lea     rax, [r9 + rbp]
+        inc     rax
+        vmovsd  qword ptr [rcx + 8*rbp + 8], xmm2
+        mov     qword ptr [r8 + 8*rbp + 8], rax
+        vmovapd xmm3, xmm2
+.LBB2_4:
+        vshufpd xmm4, xmm2, xmm2, 1
+        vucomisd        xmm3, xmm4
+        jbe     .LBB2_6
+        vmovsd  qword ptr [rcx + 8*rbp + 8], xmm4
+        lea     rax, [r9 + rbp]
+        add     rax, 2
+        mov     qword ptr [r8 + 8*rbp + 8], rax
+        vmovapd xmm3, xmm4
+.LBB2_6:
+        vextractf128    xmm4, ymm2, 1
+        vucomisd        xmm3, xmm4
+        jbe     .LBB2_8
+        vmovsd  qword ptr [rcx + 8*rbp + 8], xmm4
+        lea     rax, [r9 + rbp]
+        add     rax, 3
+        mov     qword ptr [r8 + 8*rbp + 8], rax
+        vmovapd xmm3, xmm4
+.LBB2_8:
+        vshufpd xmm4, xmm4, xmm4, 1
+        vucomisd        xmm3, xmm4
+        jbe     .LBB2_10
+        vmovsd  qword ptr [rcx + 8*rbp + 8], xmm4
+        lea     rax, [r9 + rbp]
+        add     rax, 4
+        mov     qword ptr [r8 + 8*rbp + 8], rax
+        jmp     .LBB2_10
+.LBB2_11:
+        pop     rbx
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     r15
+        pop     rbp
+        vzeroupper
+        ret
+
+.LCPI3_0:
+        .quad   0x7ff0000000000000
+.LCPI3_1:
+        .quad   1
+scrimp_thread_reduce_avx2:
+        test    r9, r9
+        jle     .LBB3_1
+        push    r15
+        push    r14
+        push    r12
+        push    rbx
+        mov     rax, qword ptr [rsp + 40]
+        cmp     r9, 1
+        jne     .LBB3_7
+        vbroadcastsd    ymm0, qword ptr [rip + .LCPI3_1]
+        vbroadcastsd    ymm1, qword ptr [rip + .LCPI3_0]
+        xor     r10d, r10d
+        jmp     .LBB3_4
+.LBB3_1:
+        vbroadcastsd    ymm1, qword ptr [rip + .LCPI3_0]
+        vbroadcastsd    ymm0, qword ptr [rip + .LCPI3_1]
+        jmp     .LBB3_6
+.LBB3_7:
+        movabs  r11, 9223372036854775806
+        and     r11, r9
+        lea     rbx, [rsi + 8*rax]
+        lea     r14, [8*r8]
+        mov     r15, rax
+        shl     r15, 4
+        vbroadcastsd    ymm0, qword ptr [rip + .LCPI3_1]
+        lea     r12, [rdi + 8*rax]
+        vbroadcastsd    ymm1, qword ptr [rip + .LCPI3_0]
+        xor     r10d, r10d
+.LBB3_8:
+        vmovupd ymm2, ymmword ptr [rdi + r14]
+        vcmpltpd        ymm3, ymm2, ymm1
+        vblendvpd       ymm0, ymm0, ymmword ptr [rsi + r14], ymm3
+        vminpd  ymm1, ymm2, ymm1
+        vmovupd ymm2, ymmword ptr [r12 + r14]
+        vcmpltpd        ymm3, ymm2, ymm1
+        vblendvpd       ymm0, ymm0, ymmword ptr [rbx + r14], ymm3
+        vminpd  ymm1, ymm2, ymm1
+        add     r10, 2
+        add     r14, r15
+        cmp     r11, r10
+        jne     .LBB3_8
+.LBB3_4:
+        test    r9b, 1
+        pop     rbx
+        pop     r12
+        pop     r14
+        pop     r15
+        je      .LBB3_6
+        imul    r10, rax
+        add     r10, r8
+        vmovupd ymm2, ymmword ptr [rdi + 8*r10]
+        vcmpltpd        ymm3, ymm2, ymm1
+        vblendvpd       ymm0, ymm0, ymmword ptr [rsi + 8*r10], ymm3
+        vminpd  ymm1, ymm2, ymm1
+.LBB3_6:
+        vmovupd ymmword ptr [rdx + 8*r8], ymm1
+        vmovupd ymmword ptr [rcx + 8*r8], ymm0
+        vzeroupper
+        ret
