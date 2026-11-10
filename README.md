@@ -11,6 +11,7 @@ matrix_profile_codes/
 ├── source codes/                  # Full algorithm implementations per architecture
 │   ├── arm/                       # ARM AArch64 scalar and SVE implementations (+ gem5 traces)
 │   └── riscv/                     # RISC-V RV64 scalar and RVV implementations (OpenMP, QEMU, gem5)
+|   └── gem5_config_scripts        # Gem5 config scripts for RISC-V and ARM
 ├── Section 6.3 microbenchmarks/   # Phase-isolated microbenchmarks & ISA complexity study
 │   ├── microbenchmarks/           # Standalone C++ kernels isolating phases PH1 to PH4
 │   ├── outputs/                   # 36 Godbolt compiler assembly traces (GCC 14.2 & Clang 18.1)
@@ -39,6 +40,11 @@ Contains the complete, end-to-end implementations of SCAMP and SCRIMP tailored t
   - `scamp-vomp.cpp`, `scrimp-vomp.cpp`: Multi-threaded RVV implementations parallelized with OpenMP (`schedule(dynamic)`).
   - `scamp-v-nored.cpp`, `scrimp-v-nored.cpp`: RVV ablation variants without horizontal reduction.
   - `*-qemu`: Precompiled cross-architecture binaries for functional validation under QEMU.
+- **`gem5_config_scripts/`**:
+  - custom_cache: cache configuration for both ISAS, needed to execute the scripts.
+  - gem5_config_riscv.py: config script for RISC-V implementation.
+  - gem5_config_arm.py: config script for ARM implementation. 
+
 
 ### 2. `Section 6.3 microbenchmarks/`
 Contains the phase-isolated kernels, assembly traces, and compiler evaluation artifacts used to analyze ISA complexity free of simulator or hardware clock biases:
